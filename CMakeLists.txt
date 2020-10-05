@@ -2,8 +2,11 @@ CMAKE_MINIMUM_REQUIRED ( VERSION 3.2)
 cmake_policy(SET CMP0091 NEW)
 project(FakeSensor VERSION 0.1.1)
 
-add_library (FakeSensor SHARED source/dccmtr.cpp source/dllmain.cpp source/pch.cpp source/Process.cpp) 
+add_library (FakeSensor SHARED source/dccmtr.cpp source/dllmain.cpp source/pch.cpp source/Process.cpp)
 set_property(TARGET FakeSensor PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+
+add_executable(sensortest source/sensortest.cpp)
+target_link_libraries(sensortest FakeSensor)
 
 add_custom_command(
         TARGET FakeSensor POST_BUILD
@@ -30,4 +33,5 @@ add_custom_target(
                 "autocal.ini"
                 "LICENSE"
                 "README.md"
+                "sensortest.exe"
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/Release)
