@@ -10,6 +10,4 @@ extern "C" {
 	__declspec(dllexport) bool DC_ReadAmbientLightLevel(unsigned short* pLux);
 	__declspec(dllexport) bool DC_WriteAmbientLightControlRegVal(char val);
 	__declspec(dllexport) bool DC_SetLED(char mode, unsigned short rate);
-
-	__declspec(dllexport) void print_correction();
 }

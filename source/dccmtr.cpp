@@ -19,7 +19,7 @@ bool DC_Startup(int* pVendor, unsigned short usb)
 	char command[MAX_PATH], environment[256];
 	GetPrivateProfileStringA("autocal", "command", NULL, command, sizeof(command) - 1, path);
 	GetPrivateProfileStringA("autocal", "environment", NULL, environment, sizeof(environment) - 2, path);
-	
+
 	p = new Process(command, environment);
 	if (!p->start()) {
 		delete p;
@@ -102,9 +102,4 @@ bool DC_WriteAmbientLightControlRegVal(char val)
 bool DC_SetLED(char mode, unsigned short rate)
 {
 	return true;
-}
-
-void print_correction()
-{
-
 }
