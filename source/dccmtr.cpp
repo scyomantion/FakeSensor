@@ -26,7 +26,12 @@ bool DC_Startup(int* pVendor, unsigned short usb)
 		p = NULL;
 		return false;
 	}
-	p->waitForOutput();
+
+	if(!p->waitForOutput("Hit ESC or Q to exit", 30)) {
+		delete p;
+		p = NULL;
+		return false;
+	}
 
 	return true;
 }
@@ -49,7 +54,9 @@ bool DC_GetXYZ(unsigned short frames, int* pX, int* pY, int* pZ)
 
 	p->clearOutput();
 	p->writeInput(" ");
-	p->waitForOutput("Hit ESC or Q to exit");
+	if(!p->waitForOutput("Hit ESC or Q to exit", 60)) {
+		return false;
+	}
 
 	string processdata = p->output();
 	size_t pos = processdata.find("Result is XYZ: ");

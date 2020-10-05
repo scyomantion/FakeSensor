@@ -4,6 +4,7 @@
 Process::Process(string command, string environment) {
 	_command = command;
 	_environment = environment;
+	_running = false;
 }
 
 Process::~Process() {
@@ -25,7 +26,7 @@ bool Process::start() {
 	HANDLE hChildStd_IN_Wr = NULL;
 	HANDLE hChildStd_OUT_Rd = NULL;
 	HANDLE hChildStd_OUT_Wr = NULL;
-	
+
 	SECURITY_ATTRIBUTES saAttr;
 	saAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
 	saAttr.bInheritHandle = TRUE;
@@ -59,17 +60,17 @@ bool Process::start() {
 	_environment.resize(_environment.size() + 2);
 
 	bSuccess = CreateProcessA(NULL,
-		(LPSTR)_command.c_str(),     // command line 
-		NULL,          // process security attributes 
-		NULL,          // primary thread security attributes 
-		true,          // handles are inherited 
-		NULL,             // creation flags 
-		(LPVOID)_environment.c_str(),          // use parent's environment 
-		NULL,          // use parent's current directory 
-		&siStartInfo,  // STARTUPINFO pointer 
-		&piProcInfo);  // receives PROCESS_INFORMATION 
+		(LPSTR)_command.c_str(),     // command line
+		NULL,          // process security attributes
+		NULL,          // primary thread security attributes
+		true,          // handles are inherited
+		NULL,             // creation flags
+		(LPVOID)_environment.c_str(),          // use parent's environment
+		NULL,          // use parent's current directory
+		&siStartInfo,  // STARTUPINFO pointer
+		&piProcInfo);  // receives PROCESS_INFORMATION
 
-	 // If an error occurs, exit the application. 
+	 // If an error occurs, exit the application.
 	if (!bSuccess) {
 		printf("could not create process\n");
 		return false;
@@ -83,6 +84,7 @@ bool Process::start() {
 
 	_stdout = hChildStd_OUT_Rd;
 	_stdin = hChildStd_IN_Wr;
+	_running = true;
 	_thread = thread([this]() {readThread(); });
 
 	return true;
@@ -93,19 +95,38 @@ void Process::clearOutput() {
 	_stdoutbuffer.clear();
 }
 
-void Process::waitForOutput() {
+bool Process::waitForOutput() {
 	unique_lock<mutex> lock(_mutex);
 	_cv.wait(lock, [this]() {
-		return !_stdoutbuffer.empty();
+		return !_stdoutbuffer.empty() || !_running;
 	});
+	return !_stdoutbuffer.empty();
 }
 
-void Process::waitForOutput(const string& data)
+bool Process::waitForOutput(int seconds) {
+	unique_lock<mutex> lock(_mutex);
+	_cv.wait_for(lock, chrono::seconds(seconds), [this]() {
+		return !_stdoutbuffer.empty() || !_running;
+	});
+	return !_stdoutbuffer.empty();
+}
+
+bool Process::waitForOutput(const string& data)
 {
 	unique_lock<mutex> lock(_mutex);
 	_cv.wait(lock, [this, data]() {
-		return _stdoutbuffer.find(data) != _stdoutbuffer.npos;
+		return _stdoutbuffer.find(data) != _stdoutbuffer.npos || !_running;
 	});
+	return _stdoutbuffer.find(data) != _stdoutbuffer.npos;
+}
+
+bool Process::waitForOutput(const string& data, int seconds)
+{
+	unique_lock<mutex> lock(_mutex);
+	_cv.wait_for(lock, chrono::seconds(seconds), [this, data]() {
+		return _stdoutbuffer.find(data) != _stdoutbuffer.npos || !_running;
+	});
+	return _stdoutbuffer.find(data) != _stdoutbuffer.npos;
 }
 
 bool Process::writeInput(const string &data)
@@ -133,8 +154,10 @@ void Process::readThread() {
 		if (read == 0) break;
 
 		lock.lock();
-		//printf("read %d bytes: %.*s\n", read, read, buffer);
 		_stdoutbuffer += string(buffer, read);
 		_cv.notify_one();
 	}
+	lock.lock();
+	_running = false;
+	_cv.notify_one();
 }
