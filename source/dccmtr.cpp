@@ -3,6 +3,7 @@
 #include "Process.h"
 
 Process *p = NULL;
+int delay = 0;
 
 bool DC_Startup(int* pVendor, unsigned short usb)
 {
@@ -19,6 +20,7 @@ bool DC_Startup(int* pVendor, unsigned short usb)
 	char command[MAX_PATH], environment[256];
 	GetPrivateProfileStringA("autocal", "command", NULL, command, sizeof(command) - 1, path);
 	GetPrivateProfileStringA("autocal", "environment", NULL, environment, sizeof(environment) - 2, path);
+	delay = GetPrivateProfileIntA("autocal", "delay", 0, path);
 
 	p = new Process(command, environment);
 	if (!p->start()) {
@@ -50,6 +52,10 @@ bool DC_GetXYZ(unsigned short frames, int* pX, int* pY, int* pZ)
 {
 	if (!p) {
 		return false;
+	}
+
+	if(delay) {
+		this_thread::sleep_for(chrono::seconds(delay));
 	}
 
 	p->clearOutput();
