@@ -6,3 +6,5 @@ cmake --build build32 --config Release --target create_zip
 
 cmake --build build64 --config Release
 cmake --build build64 --config Release --target create_zip
+
+pause
