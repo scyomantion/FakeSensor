@@ -8,6 +8,8 @@ set_property(TARGET FakeSensor PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<C
 add_executable(sensortest source/sensortest.cpp)
 target_link_libraries(sensortest FakeSensor)
 
+add_executable(parametertest source/parametertest.cpp source/Process.cpp)
+
 add_custom_command(
         TARGET FakeSensor POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy
