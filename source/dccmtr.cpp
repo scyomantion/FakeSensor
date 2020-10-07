@@ -35,7 +35,6 @@ bool DC_Startup(int* pVendor, unsigned short usb)
 	if(res == -1) {
 		delete p;
 		p = NULL;
-		MessageBoxA(0, "Error 1", "Error", MB_OK);
 		return false;
 	}
 
@@ -43,7 +42,6 @@ bool DC_Startup(int* pVendor, unsigned short usb)
 		if(!p->waitForOutput("or hit Esc or Q to abort", 30)) {
 			delete p;
 			p = NULL;
-			MessageBoxA(0, "Error 2", "Error", MB_OK);
 			return false;
 		}
 
@@ -52,8 +50,6 @@ bool DC_Startup(int* pVendor, unsigned short usb)
 		if(pos1 == message.npos) {
 			delete p;
 			p = NULL;
-			MessageBoxA(0, "Error 3", "Error", MB_OK);
-			MessageBoxA(0, message.c_str(), "Output was", MB_OK);
 			return false;
 		}
 		pos1 += 18;
@@ -71,12 +67,15 @@ bool DC_Startup(int* pVendor, unsigned short usb)
 		message = message.substr(pos1, pos2-pos1);
 		MessageBoxA(0, message.c_str(), "Message from ArgyllCMS", MB_OK | MB_ICONWARNING);
 		p->clearOutput();
-		p->writeInput(" ");
+	
+		for(int i = 0; i < 3; i++) {
+			p->writeInput(" ");
+			this_thread::sleep_for(chrono::seconds(1));
+		}
+		
 		if(!p->waitForOutput("Hit ESC or Q to exit", 30)) {
 			delete p;
 			p = NULL;
-			MessageBoxA(0, "Error 4", "Error", MB_OK);
-			MessageBoxA(0, message.c_str(), "Output was", MB_OK);
 			return false;
 		}
 	}
