@@ -1,6 +1,6 @@
 CMAKE_MINIMUM_REQUIRED ( VERSION 3.2)
 cmake_policy(SET CMP0091 NEW)
-project(FakeSensor VERSION 0.1.2)
+project(FakeSensor VERSION 0.1.3)
 
 add_library (FakeSensor SHARED source/dccmtr.cpp source/dllmain.cpp source/pch.cpp source/Process.cpp)
 set_property(TARGET FakeSensor PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")

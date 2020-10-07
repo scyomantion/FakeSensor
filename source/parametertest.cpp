@@ -4,7 +4,7 @@
 int main(int argc, char **argv)
 {
     if(argc < 2) {
-        Process p("parametertest.exe -test -parameter 1", "");
+        Process p("parametertest.exe -test -parameter 1", "", false);
         p.start();
         p.waitForOutput();
         printf("output was: %s\n", p.output().c_str());

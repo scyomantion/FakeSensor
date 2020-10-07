@@ -1,10 +1,11 @@
 #include "pch.h"
 #include "Process.h"
 
-Process::Process(string command, string environment) {
+Process::Process(string command, string environment, bool debug) {
 	_command = command;
 	_environment = environment;
 	_running = false;
+	_debug = debug;
 }
 
 Process::~Process() {
@@ -59,6 +60,8 @@ bool Process::start() {
 	// environment needs two \0 at the end
 	_environment.resize(_environment.size() + 2);
 
+	debug("create process: %s", _command.c_str());
+	debug("environment: %s", _environment.c_str());
 	bSuccess = CreateProcessA(NULL,
 		(LPSTR)_command.c_str(),     // command line
 		NULL,          // process security attributes
@@ -72,9 +75,10 @@ bool Process::start() {
 
 	 // If an error occurs, exit the application.
 	if (!bSuccess) {
-		printf("could not create process\n");
+		debug("could not create process");
 		return false;
 	}
+	debug("process created");
 
 	_hProcess = piProcInfo.hProcess;
 	CloseHandle(piProcInfo.hThread);
@@ -85,6 +89,7 @@ bool Process::start() {
 	_stdout = hChildStd_OUT_Rd;
 	_stdin = hChildStd_IN_Wr;
 	_running = true;
+	debug("start thread");
 	_thread = thread([this]() {readThread(); });
 
 	return true;
@@ -92,45 +97,87 @@ bool Process::start() {
 
 void Process::clearOutput() {
 	unique_lock<mutex> lock(_mutex);
+	debug("clear output");
 	_stdoutbuffer.clear();
 }
 
 bool Process::waitForOutput() {
 	unique_lock<mutex> lock(_mutex);
+	debug("waitForOutput()");
 	_cv.wait(lock, [this]() {
 		return !_stdoutbuffer.empty() || !_running;
 	});
-	return !_stdoutbuffer.empty();
+	bool res = !_stdoutbuffer.empty();
+	debug("waitForOutput(): %d", res);
+	return res;
 }
 
 bool Process::waitForOutput(int seconds) {
 	unique_lock<mutex> lock(_mutex);
+	debug("waitForOutput(%d)", seconds);
 	_cv.wait_for(lock, chrono::seconds(seconds), [this]() {
 		return !_stdoutbuffer.empty() || !_running;
 	});
-	return !_stdoutbuffer.empty();
+	bool res = !_stdoutbuffer.empty();
+	debug("waitForOutput(%d): %d", seconds, res);
+	return res;
 }
 
 bool Process::waitForOutput(const string& data)
 {
 	unique_lock<mutex> lock(_mutex);
+	debug("waitForOutput(\"%s\")", data.c_str());
 	_cv.wait(lock, [this, data]() {
 		return _stdoutbuffer.find(data) != _stdoutbuffer.npos || !_running;
 	});
-	return _stdoutbuffer.find(data) != _stdoutbuffer.npos;
+	bool res = _stdoutbuffer.find(data) != _stdoutbuffer.npos;
+	debug("waitForOutput(\"%s\"): %d", data.c_str(), res);
+	return res;
 }
 
 bool Process::waitForOutput(const string& data, int seconds)
 {
 	unique_lock<mutex> lock(_mutex);
+	debug("waitForOutput(\"%s\", %d)", data.c_str(), seconds);
 	_cv.wait_for(lock, chrono::seconds(seconds), [this, data]() {
 		return _stdoutbuffer.find(data) != _stdoutbuffer.npos || !_running;
 	});
-	return _stdoutbuffer.find(data) != _stdoutbuffer.npos;
+	bool res = _stdoutbuffer.find(data) != _stdoutbuffer.npos;
+	debug("waitForOutput(\"%s\", %d): %d", data.c_str(), seconds, res);
+	return res;
+}
+
+int Process::waitForAnyOutput(const vector<string> &datas, int seconds)
+{
+	unique_lock<mutex> lock(_mutex);
+	debug("waitForAnyOutput(%ld, %d)", datas.size(), seconds);
+	for(size_t i = 0; i < datas.size(); i++) {
+		debug("%ld: %s", i, datas[i].c_str());
+	}
+
+	_cv.wait_for(lock, chrono::seconds(seconds), [this, datas]() {
+		for(auto &data: datas) {
+			if(_stdoutbuffer.find(data) != _stdoutbuffer.npos)
+				return true;
+		}
+		if(!_running)
+			return true;
+
+		return false;
+	});
+	for(size_t i = 0; i < datas.size(); i++) {
+		if(_stdoutbuffer.find(datas[i]) != _stdoutbuffer.npos) {
+			debug("waitForAnyOutput(%ld, %d): %ld", datas.size(), seconds, i);
+			return static_cast<int>(i);
+		}
+	}
+	debug("waitForAnyOutput(%ld, %d): %d", datas.size(), seconds, -1);
+	return -1;
 }
 
 bool Process::writeInput(const string &data)
 {
+	debug("input: \"%s\"", data.c_str());
 	if (!WriteFile(_stdin, data.c_str(), static_cast<DWORD>(data.size()), NULL, NULL)) {
 		return false;
 	}
@@ -138,6 +185,7 @@ bool Process::writeInput(const string &data)
 }
 
 string Process::output() {
+	debug("return output: \"%s\"", _stdoutbuffer.c_str());
 	return _stdoutbuffer;
 }
 
@@ -154,10 +202,12 @@ void Process::readThread() {
 		if (read == 0) break;
 
 		lock.lock();
+		debug("add output: \"%s\"", string(buffer, read).c_str());
 		_stdoutbuffer += string(buffer, read);
 		_cv.notify_one();
 	}
 	lock.lock();
 	_running = false;
 	_cv.notify_one();
+	debug("read thread ended");
 }

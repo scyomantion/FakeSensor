@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <string>
 #include <mutex>
+#include <vector>
 #include <condition_variable>
 using namespace std;
 
