@@ -4,6 +4,7 @@
 
 Process *p = NULL;
 int delay = 0;
+bool zeroFix = false;
 
 bool DC_Startup(int* pVendor, unsigned short usb)
 {
@@ -22,6 +23,7 @@ bool DC_Startup(int* pVendor, unsigned short usb)
 	GetPrivateProfileStringA("autocal", "command", NULL, command, sizeof(command) - 1, path);
 	GetPrivateProfileStringA("autocal", "environment", NULL, environment, sizeof(environment) - 2, path);
 	delay = GetPrivateProfileIntA("autocal", "delay", 0, path);
+	zeroFix = (GetPrivateProfileIntA("autocal", "zerofix", 0, path) > 0);
 	debug = static_cast<bool>(GetPrivateProfileIntA("autocal", "debug", 0, path));
 	calibration = static_cast<bool>(GetPrivateProfileIntA("autocal", "calibration", 0, path));
 
@@ -140,6 +142,12 @@ bool DC_GetXYZ(unsigned short frames, int* pX, int* pY, int* pZ)
 	*pX = static_cast<int>(x * 1000.0);
 	*pY = static_cast<int>(y * 1000.0);
 	*pZ = static_cast<int>(z * 1000.0);
+
+	// It happens that a reading of Zero is processed as a failed reading,
+	// this prevents it
+	if(*pY == 0 && zeroFix) {
+		*pY = 1;
+	}
 	return true;
 }
 

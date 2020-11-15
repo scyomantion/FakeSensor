@@ -2,7 +2,7 @@
 
 This Project is a DLL that can replace the
 original dccmtr.dll from a Software that uses
-the Spyder 4 Sensor. After replacement the
+the Spyder 4 or 5 Sensor. After replacement the
 software can use the ArgyllCMS so you can use
 many other Sensors.
 
